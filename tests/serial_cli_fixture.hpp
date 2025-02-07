@@ -9,7 +9,9 @@ public:
     SerialCLI cli;
 
     void Process() {
-        SerialCLI_Process(&cli);
+        for (size_t i = 0; i < (SERIAL_CLI_COMMAND_MAX_ARGS + 2); i++) {
+            SerialCLI_Process(&cli);
+        }
     }
 
     void WriteString(std::string str) {

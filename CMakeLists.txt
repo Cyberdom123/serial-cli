@@ -3,14 +3,17 @@ project(serial_cli)
 
 enable_language(C CXX)
 
-set(UNIT_TESTING OFF CACHE BOOL "Enable unit testing")
+option(UNIT_TESTING "Enable unit testing" OFF)
+option(EXAMPLES "Build examples" OFF)
 
 include(requirements.cmake)
-FetchContent_MakeAvailable(googletest)
 
 if (UNIT_TESTING)
+  FetchContent_MakeAvailable(googletest)
   enable_testing()
-  add_subdirectory(Tests)
-elseif()
-  add_subdirectory(Source)
+  add_subdirectory(tests EXCLUDE_FROM_ALL)
+elseif(EXAMPLES)
+  add_subdirectory(examples)
+else()
+  add_subdirectory(source)
 endif()
