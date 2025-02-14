@@ -157,9 +157,9 @@ bool SerialCLI_RegisterCommand(SerialCLI *cli, SerialCLI_CommandEntry *command) 
 }
 
 static void SerialCLI_FormatInput(SerialCLI *cli) {
-  // Replace non-alphanumeric characters with spaces
+  // Replace whitespace characters with space
   for (size_t i = 0; i < cli->charCount; i++) {
-    if (!isalnum((unsigned char)cli->inputBuffer[i])) {
+    if (isspace((unsigned char)cli->inputBuffer[i])) {
       cli->inputBuffer[i] = ' ';
     }
   }
@@ -200,7 +200,7 @@ void SerialCLI_Process(SerialCLI *cli) {
   if (NULL == cli) {
     return;
   }
-  
+
   switch (cli->state) {
   case SERIAL_CLI_STATE_GETTING_INPUT:
     return;

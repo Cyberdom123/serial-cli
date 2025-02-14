@@ -102,6 +102,42 @@ TEST_F(SerialCLITest, ProcessCommand) {
   }
 }
 
+static void NonAlphanumericCommandHandler(SerialCLI *cli, int argc, const char **argv) {
+  (void)cli;
+  (void)argv;
+  // Checking the number of arguments
+  EXPECT_EQ(argc, 1);
+  isCommandExecuted = true;
+}
+
+TEST_F(SerialCLITest, NonAlphanumericCommand) {
+  // Initialize the command entry properly
+  SerialCLI_CommandEntry commandEntry;
+  commandEntry.command = NonAlphanumericCommandHandler;
+  commandEntry.commandName = "test!";
+  commandEntry.commandDescription = nullptr;
+
+  ASSERT_TRUE(SerialCLI_RegisterCommand(&cli, &commandEntry));
+
+
+  isCommandExecuted = false;
+  WriteString("test!\r");
+  Process();
+  EXPECT_EQ(isCommandExecuted, true);
+
+  SerialCLI_CommandEntry commandEntry2;
+  commandEntry2.command = NonAlphanumericCommandHandler;
+  commandEntry2.commandName = "test@";
+  commandEntry2.commandDescription = nullptr;
+
+  ASSERT_TRUE(SerialCLI_RegisterCommand(&cli, &commandEntry2));
+
+  isCommandExecuted = false;
+  WriteString("test@\r");
+  Process();
+  EXPECT_EQ(isCommandExecuted, true);
+}
+
 static void handleMultipleCommandArgs(SerialCLI *cli, int argc, const char **argv) {
   (void)cli;
 
