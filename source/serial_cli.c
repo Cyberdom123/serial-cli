@@ -52,7 +52,8 @@ static void SerialCLI_HelpCommand(SerialCLI *cli, int argc, const char **argv) {
   (void)argv;
 
   if (argc > 1) {
-    SerialCLI_WriteString(cli, "Usage: help");
+    SerialCLI_WriteString(cli, "Usage: help\r\n");
+    return;
   }
 
   SerialCLI_WriteString(cli, "Available commands:\r\n");
@@ -93,12 +94,11 @@ void SerialCLI_Deinit(SerialCLI *cli) {
 }
 
 void SerialCLI_Read(SerialCLI *cli, const char *str, size_t length) {
-  if (NULL == cli || (NULL == str) || (0 >= length)) {
+  if (NULL == cli || (NULL == str) || (0 >= length) || SERIAL_CLI_OUTPUT_BUFFER_SIZE < length) {
     return;
   }
 
-  // Write the input back to the serial interface
-  cli->write(str, length);
+  char output[SERIAL_CLI_OUTPUT_BUFFER_SIZE] = {0};
 
   for (size_t i = 0; i < length; i++) {
     // Reset the buffer if it is full
@@ -119,16 +119,20 @@ void SerialCLI_Read(SerialCLI *cli, const char *str, size_t length) {
         cli->inputBuffer[cli->charCount - 1] = '\0';
         cli->charCount--;
         // Delete the last character from the terminal window
-        cli->write(DELETE_SEQUENCE, strlen(DELETE_SEQUENCE));
+        strcat(output, DELETE_SEQUENCE);
       }
       break;
     default:
+      strncat(output, &str[i], 1);
       // Store the character in the input buffer
       cli->inputBuffer[cli->charCount] = str[i];
       cli->charCount++;
       break;
     }
   }
+
+  // Write the input back to the serial interface
+  cli->write(output, strlen(output));
 }
 
 void SerialCLI_WriteString(SerialCLI *cli, const char *format, ...) {
@@ -188,7 +192,8 @@ static void SerialCLI_InterpretCommand(SerialCLI *cli) {
     if (isCommandIndexValid) {
       char *argv[SERIAL_CLI_COMMAND_MAX_ARGS + 1]; // argv should be null terminated
       SerialCLI_GetArgv(cli, argv);
-      cli->write("\n", 1);
+      char *toWrite = "\r\n";
+      cli->write(toWrite, strlen(toWrite)); 
       cli->commands[cli->commandIndex].command(cli, cli->tokenCount, (const char **)argv);
     }
 
