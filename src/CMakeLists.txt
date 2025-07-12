@@ -7,5 +7,7 @@ add_library(
 target_include_directories(
   serial_cli
   PUBLIC
-  ${CMAKE_CURRENT_SOURCE_DIR}/include
+  include
+  PRIVATE
+  include_internal
 )

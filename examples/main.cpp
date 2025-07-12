@@ -1,72 +1,68 @@
-#include <stdio.h>
-#include <termios.h>
-#include <unistd.h>
-#include <thread>
-#include <iostream>
-#include <string>
-#include <atomic>
-
 #include "serial_cli.h"
 
-static SerialCLI cli;
+#include <atomic>
+#include <iostream>
+#include <mutex>
+#include <stdio.h>
+#include <string>
+#include <termios.h>
+#include <thread>
+#include <unistd.h>
+
+namespace {
+
+SerialCLI cli;
+
+// Global flag to signal threads to stop
+std::atomic<bool> stopFlag(false);
+std::mutex mutex;
 
 // Structures to save the terminal settings for original settings & raw mode
 struct termios originalStdin;
 struct termios rawStdin;
 
-enum {
-  CTRL_C = 3,
-};
+void consoleWrite(const char *str, size_t len) { write(STDOUT_FILENO, str, len); }
 
-// Global flag to signal threads to stop
-std::atomic<bool> stopFlag(false);
-
-static void consoleWrite(const char *str, size_t len) {
-  (void)len;
-  write(STDOUT_FILENO, str, len);
-}
-
-static void consoleRead() {
+void consoleRead(void) {
   while (!stopFlag) {
-    unsigned char c;
+    char c;
     if (read(STDIN_FILENO, &c, 1) > 0) {
       // This is a way to exit the program when ctrl+c is pressed
-      if (c == CTRL_C) {
+      const int ctrlC = 3;
+      if (c == ctrlC) {
         // stop all threads
         stopFlag = true;
       }
 
-      SerialCLI_Read(&cli, (const char *)&c, 1);
+      mutex.lock();
+      SerialCLI_Read(&cli, &c, 1);
+      mutex.unlock();
     }
   }
 }
 
-static void process() {
+void process(void) {
   while (!stopFlag) {
+    mutex.lock();
     SerialCLI_Process(&cli);
+    mutex.unlock();
     std::this_thread::sleep_for(std::chrono::milliseconds(10));
   }
 }
 
 void exampleCommand(SerialCLI *cli, int argc, const char **argv) {
-  switch (argc) {
-    case 1:
-      SerialCLI_WriteString(cli, "No arguments provided.\r\n");
-      break;
-    case 2:
-      SerialCLI_WriteString(cli, "One argument provided: %s\r\n", argv[1]);
-      break;
-    case 3:
-      SerialCLI_WriteString(cli, "Two arguments provided: %s, %s\r\n", argv[1], argv[2]);
-      break;
-    case 4:
-      SerialCLI_WriteString(cli, "Three arguments provided: %s, %s, %s\r\n", argv[1], argv[2], argv[3]);
-      break;
-    case 5:
-      SerialCLI_WriteString(cli, "Four arguments provided: %s, %s, %s, %s\r\n", argv[1], argv[2], argv[3], argv[4]);
-      break;
+  if (argc <= 1) {
+    SerialCLI_WriteString(cli, "No arguments provided.\r\n");
+    return;
   }
+  SerialCLI_WriteString(cli, "%d argument provided:", argc - 1);
+  for (int i = 1; i < argc; ++i) {
+    SerialCLI_WriteString(cli, " %s%s", argv[i], (i < argc - 1) ? "," : "");
+  }
+  SerialCLI_WriteString(cli, "\r\n");
 }
+
+} // namespace
 
 int main() {
   // Backup the terminal settings, and switch to raw mode
@@ -75,23 +71,32 @@ int main() {
   cfmakeraw(&rawStdin);
   tcsetattr(STDIN_FILENO, TCSANOW, &rawStdin);
 
-  std::cout << "Press CTRL+c to exit" << std::endl;
+  int ret = 0;
+  try {
+    std::cout << "Press CTRL+c to exit" << std::endl;
 
-  SerialCLI_Init(&cli, consoleWrite);
+    SerialCLI_Init(&cli, consoleWrite);
 
-  SerialCLI_CommandEntry commandEntry;
-  commandEntry.command = exampleCommand;
-  commandEntry.commandName = "example";
-  commandEntry.commandDescription = "Example command.";
-  SerialCLI_RegisterCommand(&cli, &commandEntry);
+    SerialCLI_CommandEntry commandEntry;
+    commandEntry.command = exampleCommand;
+    commandEntry.commandName = "example";
+    commandEntry.commandDescription = "Example command.";
+    SerialCLI_RegisterCommand(&cli, &commandEntry);
 
-  std::thread consoleReadThread(consoleRead);
-  std::thread processThread(process);
+    std::thread consoleReadThread(consoleRead);
+    std::thread processThread(process);
 
-  consoleReadThread.join();
-  processThread.join();
+    consoleReadThread.join();
+    processThread.join();
+  } catch (const std::exception &ex) {
+    std::cerr << "Exception: " << ex.what() << std::endl;
+    ret = 1;
+  } catch (...) {
+    std::cerr << "Unknown exception occurred." << std::endl;
+    ret = 1;
+  }
 
   // Restore terminal settings
   tcsetattr(STDIN_FILENO, TCSANOW, &originalStdin);
-  return 0;
+  return ret;
 }

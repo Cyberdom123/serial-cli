@@ -1,19 +1,17 @@
 cmake_minimum_required(VERSION 3.22)
 project(serial_cli)
 
-enable_language(C CXX)
-
-option(UNIT_TESTING "Enable unit testing" OFF)
-option(EXAMPLES "Build examples" OFF)
+option(UNIT_TESTING "Enable unit testing" ${PROJECT_IS_TOP_LEVEL})
+option(EXAMPLES "Build examples" ${PROJECT_IS_TOP_LEVEL})
 
 include(requirements.cmake)
 
-if (UNIT_TESTING)
-  FetchContent_MakeAvailable(googletest)
-  enable_testing()
+add_subdirectory(src)
+
+if(UNIT_TESTING)
   add_subdirectory(tests EXCLUDE_FROM_ALL)
-elseif(EXAMPLES)
-  add_subdirectory(examples)
-else()
-  add_subdirectory(source)
+endif()
+
+if(EXAMPLES)
+  add_subdirectory(examples EXCLUDE_FROM_ALL)
 endif()

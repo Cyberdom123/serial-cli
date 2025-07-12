@@ -1,89 +1,41 @@
 {
-  "version": 3,
-  "configurePresets": [
-      {
-          "name": "default",
-          "hidden": true,
-          "generator": "Ninja",
-          "binaryDir": "${sourceDir}/build/${presetName}",
-          "environment": {
-            "CFLAGS": "-Wall -Wextra -Wpedantic -Wunused-parameter -Winit-self -Wcast-align -Wconversion -Wnull-dereference -Wduplicated-cond  -Wsign-conversion -Wlogical-op",
-            "CXXFLAGS": "-Wall -Wextra -Wpedantic -Wunused-parameter -Winit-self -Wcast-align -Wconversion -Wnull-dereference -Wduplicated-cond  -Wsign-conversion -Wlogical-op"
-        },
-            "cacheVariables": {
-                "UNIT_TESTING": "OFF",
-                "EXAMPLES": "OFF"
+    "version": 3,
+    "configurePresets": [
+        {
+            "name": "default",
+            "hidden": true,
+            "generator": "Ninja",
+            "binaryDir": "${sourceDir}/build/${presetName}",
+            "environment": {
+                "CFLAGS": "-Wall -Wextra -Wpedantic -Wunused-parameter -Winit-self -Wcast-align -Wconversion -Wnull-dereference -Wduplicated-cond  -Wsign-conversion -Wlogical-op",
+                "CXXFLAGS": "-Wall -Wextra -Wpedantic -Wunused-parameter -Winit-self -Wcast-align -Wconversion -Wnull-dereference -Wduplicated-cond  -Wsign-conversion -Wlogical-op"
             }
-      },
-      {
-          "name": "Debug",
-          "inherits": "default",
-          "cacheVariables": {
-              "CMAKE_BUILD_TYPE": "Debug"
-          }
-      },
-      {
-          "name": "RelWithDebInfo",
-          "inherits": "default",
-          "cacheVariables": {
-              "CMAKE_BUILD_TYPE": "RelWithDebInfo"
-          }
-      },
-      {
-          "name": "Release",
-          "inherits": "default",
-          "cacheVariables": {
-              "CMAKE_BUILD_TYPE": "Release"
-          }
-      },
-      {
-          "name": "MinSizeRel",
-          "inherits": "default",
-          "cacheVariables": {
-              "CMAKE_BUILD_TYPE": "MinSizeRel"
-          }
-      },
-      {
-          "name": "UnitTests",
-          "inherits": "default",
-          "cacheVariables": {
-              "CMAKE_BUILD_TYPE": "Debug",
-              "UNIT_TESTING": "ON"
-          }
-      },
-      {
-          "name": "Examples",
-          "inherits": "default",
-          "cacheVariables": {
-               "CMAKE_BUILD_TYPE": "Debug",
-               "EXAMPLES": "ON"
-          }
-      }
-  ],
-  "buildPresets": [
-      {
-          "name": "Debug",
-          "configurePreset": "Debug"
-      },
-      {
-          "name": "RelWithDebInfo",
-          "configurePreset": "RelWithDebInfo"
-      },
-      {
-          "name": "Release",
-          "configurePreset": "Release"
-      },
-      {
-          "name": "MinSizeRel",
-          "configurePreset": "MinSizeRel"
-      },
-      {
-          "name": "UnitTests",
-          "configurePreset": "UnitTests"
-      },
-      {
-          "name": "Examples",
-          "configurePreset": "Examples"
-      }
-  ]
+        },
+        {
+            "name": "UnitTests",
+            "inherits": "default",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Debug"
+            }
+        },
+        {
+            "name": "Examples",
+            "inherits": "default",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Debug"
+            }
+        }
+    ],
+    "buildPresets": [
+        {
+            "name": "UnitTests",
+            "configurePreset": "UnitTests",
+            "targets": "unit_tests"
+        },
+        {
+            "name": "Examples",
+            "configurePreset": "Examples",
+            "targets": "serial_cli_examples"
+        }
+    ]
 }
