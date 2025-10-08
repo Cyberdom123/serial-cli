@@ -106,11 +106,12 @@ void SerialCLI_Deinit(SerialCLI *cli) {
 }
 
 void SerialCLI_Read(SerialCLI *cli, const char *str, size_t length) {
-  if (NULL == cli || (NULL == str) || (0 >= length) || SERIAL_CLI_OUTPUT_BUFFER_SIZE < length) {
+  if (NULL == cli || (NULL == str) || (0 >= length) || (SERIAL_CLI_OUTPUT_BUFFER_SIZE < length)) {
     return;
   }
 
   char output[SERIAL_CLI_OUTPUT_BUFFER_SIZE] = {0};
+  size_t outputLen = 0;
 
   for (size_t i = 0; i < length; ++i) {
     // Reset the buffer if it is full
@@ -129,20 +130,27 @@ void SerialCLI_Read(SerialCLI *cli, const char *str, size_t length) {
         // Remove the last character from the input buffer
         cli->inputBuffer[cli->charCount - 1] = '\0';
         cli->charCount--;
+
         // Delete the last character from the terminal window
         const char *deleteSequence = "\b \b";
-        strncat(output, deleteSequence, (sizeof(output) - strlen(output) - 1));
+        if ((outputLen + strlen(deleteSequence) + 1) < sizeof(output)) {
+          memcpy(output + outputLen, deleteSequence, strlen(deleteSequence));
+          outputLen += strlen(deleteSequence);
+        }
       }
       break;
     }
 
-    output[i] = str[i];
+    output[outputLen] = str[i];
+    outputLen++;
     cli->inputBuffer[cli->charCount] = str[i];
     cli->charCount++;
   }
 
   // Write the input back to the serial interface
-  cli->write(output, strlen(output));
+  if (outputLen > 0) {
+    cli->write(output, outputLen);
+  }
 }
 
 void SerialCLI_WriteString(SerialCLI *cli, const char *format, ...) {

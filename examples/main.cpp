@@ -1,6 +1,7 @@
 #include "serial_cli.h"
 
 #include <atomic>
+#include <chrono>
 #include <iostream>
 #include <mutex>
 #include <stdio.h>
@@ -8,6 +9,8 @@
 #include <termios.h>
 #include <thread>
 #include <unistd.h>
+
+using namespace std::chrono_literals;
 
 namespace {
 
@@ -28,26 +31,26 @@ void consoleRead(void) {
   while (!stopFlag) {
     char c;
     if (read(STDIN_FILENO, &c, 1) > 0) {
-      // This is a way to exit the program when ctrl+c is pressed
-      const int ctrlC = 3;
-      if (c == ctrlC) {
-        // stop all threads
+      // Exit the program when Ctrl+C is pressed (ASCII ETX character)
+      constexpr int CTRL_C = 3;
+      if (c == CTRL_C) {
+        std::cout << "\nReceived Ctrl+C, shutting down..." << std::endl;
         stopFlag = true;
       }
 
-      mutex.lock();
-      SerialCLI_Read(&cli, &c, 1);
-      mutex.unlock();
+      if (std::unique_lock<std::mutex> lock(mutex, std::try_to_lock); lock.owns_lock()) {
+        SerialCLI_Read(&cli, &c, 1);
+      }
     }
   }
 }
 
 void process(void) {
   while (!stopFlag) {
-    mutex.lock();
-    SerialCLI_Process(&cli);
-    mutex.unlock();
-    std::this_thread::sleep_for(std::chrono::milliseconds(10));
+    if (std::unique_lock<std::mutex> lock(mutex, std::try_to_lock); lock.owns_lock()) {
+      SerialCLI_Process(&cli);
+    }
+    std::this_thread::sleep_for(10ms);
   }
 }
 
@@ -67,10 +70,18 @@ void exampleCommand(SerialCLI *cli, int argc, const char **argv) {
 
 int main() {
   // Backup the terminal settings, and switch to raw mode
-  tcgetattr(STDIN_FILENO, &originalStdin);
+  if (tcgetattr(STDIN_FILENO, &originalStdin) != 0) {
+    std::cerr << "Failed to get terminal attributes" << std::endl;
+    return 1;
+  }
+
   rawStdin = originalStdin;
   cfmakeraw(&rawStdin);
-  tcsetattr(STDIN_FILENO, TCSANOW, &rawStdin);
+
+  if (tcsetattr(STDIN_FILENO, TCSANOW, &rawStdin) != 0) {
+    std::cerr << "Failed to set terminal to raw mode" << std::endl;
+    return 1;
+  }
 
   int ret = 0;
   try {
