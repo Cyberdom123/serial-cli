@@ -26,20 +26,17 @@ TEST_F(SerialCLITest, CommandRegistration) {
 
   commandEntry.command = [](SerialCLI *, int, const char **) {};
 
-  for (auto i = 0; i < SERIAL_CLI_COMMANDS_MAX; ++i) {
-    ASSERT_TRUE(SerialCLI_RegisterCommand(&cli, &commandEntry));
-  }
-  // Exceed the maximum number of commands
-  ASSERT_FALSE(SerialCLI_RegisterCommand(&cli, &commandEntry));
+  ASSERT_TRUE(SerialCLI_RegisterCommand(&cli, &commandEntry));
+  ASSERT_FALSE(SerialCLI_RegisterCommand(&cli, &commandEntry)) << "Duplicate registration should fail";
 }
 
 TEST_F(SerialCLITest, processCommand) {
   static bool isCommandExecuted = false;
 
-  SerialCLI_CommandEntry commandEntry{};
+  SerialCLI_CommandEntry commandEntry;
   commandEntry.command = [](SerialCLI *, int argc, const char **argv) {
     EXPECT_EQ(argc, 1);
-    ASSERT_STREQ(argv[0], "test");
+    EXPECT_STREQ(argv[0], "test");
 
     isCommandExecuted = true;
   };
@@ -69,7 +66,7 @@ TEST_F(SerialCLITest, processCommand) {
     writeString(testInput.input.c_str());
     process();
 
-    EXPECT_EQ(isCommandExecuted, testInput.expectedResult) << "Input: " << testInput.input;
+    EXPECT_EQ(isCommandExecuted, testInput.expectedResult) << "Input: " << testInput.input << std::endl;
 
     // Simulate deleting the input by writing backspace characters
     for (size_t i = 0; i < testInput.input.size(); ++i) {
@@ -86,18 +83,22 @@ TEST_F(SerialCLITest, CommandNamesWithSpecialCharacters) {
     isCommandExecuted = true;
   };
 
-  SerialCLI_CommandEntry entry;
-  entry.command = handler;
-  entry.commandDescription = nullptr;
+  SerialCLI_CommandEntry entry1;
+  entry1.command = handler;
+  entry1.commandDescription = nullptr;
+  entry1.commandName = "test!";
 
-  entry.commandName = "test!";
-  ASSERT_TRUE(SerialCLI_RegisterCommand(&cli, &entry));
+  ASSERT_TRUE(SerialCLI_RegisterCommand(&cli, &entry1));
   writeString("test!\r");
   process();
   EXPECT_TRUE(isCommandExecuted);
 
-  entry.commandName = "test@";
-  ASSERT_TRUE(SerialCLI_RegisterCommand(&cli, &entry));
+  SerialCLI_CommandEntry entry2;
+  entry2.command = handler;
+  entry2.commandDescription = nullptr;
+  entry2.commandName = "test@";
+
+  ASSERT_TRUE(SerialCLI_RegisterCommand(&cli, &entry2));
   isCommandExecuted = false;
   writeString("test@\r");
   process();

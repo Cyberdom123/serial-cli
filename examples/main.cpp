@@ -12,6 +12,7 @@
 namespace {
 
 SerialCLI cli;
+SerialCLI_CommandEntry commandEntry;
 
 // Global flag to signal threads to stop
 std::atomic<bool> stopFlag(false);
@@ -77,7 +78,6 @@ int main() {
 
     SerialCLI_Init(&cli, consoleWrite);
 
-    SerialCLI_CommandEntry commandEntry;
     commandEntry.command = exampleCommand;
     commandEntry.commandName = "example";
     commandEntry.commandDescription = "Example command.";

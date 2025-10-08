@@ -1,5 +1,7 @@
 FetchContent_MakeAvailable(googletest)
 
+enable_testing()
+
 add_executable(
   unit_tests
   serial_cli_ut.cpp

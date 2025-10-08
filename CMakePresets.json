@@ -30,6 +30,7 @@
         {
             "name": "UnitTests",
             "configurePreset": "UnitTests",
+            "configuration": "Debug",
             "targets": "unit_tests"
         },
         {

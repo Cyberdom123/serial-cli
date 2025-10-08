@@ -10,7 +10,7 @@ This library provides a simple configurable command line interface for serial co
 - Configurable maximum number of commands and arguments per command.
 - Configurable input/output buffer sizes.
 
-## Components
+## API
 
 - **SerialCLI**: The main structure representing the CLI instance.
 - **SerialCLI_Write**: Callback function type for writing serial output.
@@ -33,24 +33,21 @@ SerialCLI_Init(&cli, writeFunctionCallback);
 Register a command using the `SerialCLI_RegisterCommand` function:
 
 ```c
-void exampleCommand(SerialCLI *cli, int argc, const char **argv) {
-  switch (argc) {
-    case 1:
-      SerialCLI_WriteString(cli, "No arguments provided.\r\n");
-      break;
-    case 2:
-      SerialCLI_WriteString(cli, "One argument provided: %s\r\n", argv[1]);
-      break;
-    default:
-      SerialCLI_WriteString(cli, "Too many arguments");
-  }
+static SerialCLI_CommandEntry commandEntry;
+
+static void exampleCommand(SerialCLI *cli, int argc, const char **argv) {
+  SerialCLI_WriteString(cli, "%d arguments provided.\r\n", argc);
 }
 
-SerialCLI_CommandEntry commandEntry;
-commandEntry.command = exampleCommand;
-commandEntry.commandName = "example";
-commandEntry.commandDescription = "Example command.";
-SerialCLI_RegisterCommand(&cli, &commandEntry);
+int main() {
+  SerialCLI_Init(&cli, serialWrite);
+
+  commandEntry.command = exampleCommand;
+  commandEntry.commandName = "example";
+  commandEntry.commandDescription = "Example command.";
+  SerialCLI_RegisterCommand(&cli, &commandEntry);
+  // ...
+}
 ```
 
 ### Processing Input
@@ -58,12 +55,20 @@ SerialCLI_RegisterCommand(&cli, &commandEntry);
 Process CLI input in a task or main loop using the `SerialCLI_Process` function:
 
 ```c
+static void serialRead(const char *data, size_t len) {
+  // Read characters from serial and pass them to the CLI
+  SerialCLI_Read(&cli, data, len);
+}
+
+static void serialWrite(const char *data, size_t len) {
+  // Callback function to write output to serial
+}
+
 int main() {
+  // ...
   while (1) {
     SerialCLI_Process(&cli);
   }
 }
 ```
-<br>
-
-***You can find a more detailed example in the examples driectory.***
+***You can find a more detailed example in the examples directory.***
