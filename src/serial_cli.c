@@ -29,7 +29,9 @@ static void interpretCommand(SerialCLI *cli) {
 
   if (NULL != token) {
     //  Store the token
-    if ((cli->tokenCount == SERIAL_CLI_COMMAND_MAX_ARGS) || (strlen(token) > SERIAL_CLI_COMMAND_MAX_ARG_LENGTH)) {
+    bool isMaximumReached = (cli->tokenCount == SERIAL_CLI_COMMAND_MAX_ARGS);
+    bool isArgTooLong = (strlen(token) > SERIAL_CLI_COMMAND_MAX_ARG_LENGTH);
+    if (isMaximumReached || isArgTooLong) {
       resetCLI(cli);
       return;
     }
@@ -41,19 +43,20 @@ static void interpretCommand(SerialCLI *cli) {
     if (1 == cli->tokenCount) {
       cli->currentCommand = SerialCLI_GetCommand(cli, token);
     }
-  } else {
-    bool isCommandValid = (NULL != cli->currentCommand);
-    if (isCommandValid) {
-      char *toWrite = "\r\n";
-      cli->write(toWrite, strlen(toWrite));
-
-      char *argv[SERIAL_CLI_COMMAND_MAX_ARGS + 1] = {0};
-      SerialCLI_GetArgv(cli, argv);
-      cli->currentCommand->command(cli, cli->tokenCount, (const char **)argv);
-    }
-
-    resetCLI(cli);
+    return;
   }
+
+  bool isCommandValid = (NULL != cli->currentCommand);
+  if (isCommandValid) {
+    char *toWrite = "\r\n";
+    cli->write(toWrite, strlen(toWrite));
+
+    char *argv[SERIAL_CLI_COMMAND_MAX_ARGS + 1] = {0};
+    SerialCLI_GetArgv(cli, argv);
+    cli->currentCommand->command(cli, cli->tokenCount, (const char **)argv);
+  }
+
+  resetCLI(cli);
 }
 
 static void helpCommand(SerialCLI *cli, int argc, const char **argv) {
@@ -114,7 +117,6 @@ void SerialCLI_Read(SerialCLI *cli, const char *str, size_t length) {
   size_t outputLen = 0;
 
   for (size_t i = 0; i < length; ++i) {
-    // Reset the buffer if it is full
     if (SERIAL_CLI_INPUT_BUFFER_SIZE == cli->charCount) {
       resetCLI(cli);
       return;
@@ -126,17 +128,19 @@ void SerialCLI_Read(SerialCLI *cli, const char *str, size_t length) {
     }
 
     if (BACKSPACE == str[i]) {
-      if (cli->charCount > 0) {
-        // Remove the last character from the input buffer
-        cli->inputBuffer[cli->charCount - 1] = '\0';
-        cli->charCount--;
+      if (cli->charCount == 0) {
+        break; // Nothing to delete
+      }
 
-        // Delete the last character from the terminal window
-        const char *deleteSequence = "\b \b";
-        if ((outputLen + strlen(deleteSequence) + 1) < sizeof(output)) {
-          memcpy(output + outputLen, deleteSequence, strlen(deleteSequence));
-          outputLen += strlen(deleteSequence);
-        }
+      // Remove the last character from the input buffer
+      cli->inputBuffer[cli->charCount - 1] = '\0';
+      cli->charCount--;
+
+      // Add backspace sequence to output for visual feedback
+      const char *deleteSequence = "\b \b";
+      if ((outputLen + strlen(deleteSequence) + 1) < sizeof(output)) {
+        memcpy(output + outputLen, deleteSequence, strlen(deleteSequence));
+        outputLen += strlen(deleteSequence);
       }
       break;
     }
