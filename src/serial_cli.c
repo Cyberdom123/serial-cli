@@ -2,6 +2,7 @@
 #include "serial_cli_commands.h"
 #include "serial_cli_internal.h"
 
+#include <ctype.h>
 #include <stdarg.h>
 #include <stdio.h>
 #include <string.h>
@@ -65,7 +66,7 @@ static const char *parseInput(SerialCLI *cli) {
     }
 
     // regular argument
-    if (isspace(cli->inputBuffer[i])) {
+    if (isspace((unsigned char)cli->inputBuffer[i])) {
       if (isRegularArgument) {
         ++argumentIdx;
       }

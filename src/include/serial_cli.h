@@ -40,7 +40,7 @@ typedef struct SerialCLI_CommandEntry {
   SerialCLI_Command command;           ///< The command function.
   const char *commandName;             ///< Name of the command.
   const char *commandDescription;      ///< Description of the command.
-  struct SerialCLI_CommandEntry *next; ///< Pointer to the next command entry.
+  struct SerialCLI_CommandEntry *next; ///< Set automatically when registered.
 } SerialCLI_CommandEntry;
 
 typedef struct SerialCLI {
@@ -84,10 +84,16 @@ void SerialCLI_Deinit(SerialCLI *cli);
 
 /**
  * Register a command with the SerialCLI.
- * Command name must be unique and has a maximum length defined by SERIAL_CLI_COMMAND_MAX_ARG_LENGTH.
+ *
+ * Command name must be unique and has a maximum length defined by
+ * SERIAL_CLI_COMMAND_MAX_ARG_LENGTH. @ref SerialCLI_CommandEntry must
+ * be statically allocated and remain valid for the lifetime of the
+ * SerialCLI instance.
  *
  * @param cli The SerialCLI instance.
  * @param command The command to register.
+ *
+ * @return true if registration was successful, false otherwise.
  */
 bool SerialCLI_RegisterCommand(SerialCLI *cli, SerialCLI_CommandEntry *command);
 
