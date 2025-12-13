@@ -10,6 +10,7 @@ extern "C" {
 
 enum {
   SERIAL_CLI_COMMAND_MAX_ARGS = 5,
+  SERIAL_CLI_PROMPT_BUFFER_MAX_LENGTH = 32,
   SERIAL_CLI_COMMAND_MAX_ARG_LENGTH = 32,
   SERIAL_CLI_OUTPUT_BUFFER_SIZE = 128,
   SERIAL_CLI_INPUT_BUFFER_SIZE =
@@ -35,12 +36,6 @@ typedef void (*SerialCLI_Command)(SerialCLI *cli, int argc, const char **argv);
  */
 typedef void (*SerialCLI_Write)(const char *str, size_t len);
 
-typedef enum {
-  SERIAL_CLI_STATE_GETTING_INPUT,
-  SERIAL_CLI_PREPROCESSING_INPUT,
-  SERIAL_CLI_PROCESSING_COMMAND,
-} SerialCLI_State;
-
 typedef struct SerialCLI_CommandEntry {
   SerialCLI_Command command;           ///< The command function.
   const char *commandName;             ///< Name of the command.
@@ -49,18 +44,16 @@ typedef struct SerialCLI_CommandEntry {
 } SerialCLI_CommandEntry;
 
 typedef struct SerialCLI {
-  SerialCLI_CommandEntry *commands;       ///< Linked list of registered commands.
-  SerialCLI_CommandEntry *currentCommand; ///< Pointer to the currently processed command.
-  SerialCLI_Write write;                  ///< The write callback function.
-  char *contextToken;                     ///< The context token for strtok_r.
+  SerialCLI_Write write;            ///< The write callback function.
+  SerialCLI_CommandEntry *commands; ///< Linked list of registered commands.
 
-  SerialCLI_State state; ///< The state of the SerialCLI.
-  size_t charCount;      ///< The number of characters in the input buffer.
-  int tokenCount;        ///< The number of extracted tokens.
+  bool isCommandReady; ///< Flag indicating if a command is ready to be processed.
+  size_t charCount;    ///< The number of characters in the input buffer.
+  size_t tokenCount;   ///< The number of extracted tokens.
 
-  char inputBuffer[SERIAL_CLI_INPUT_BUFFER_SIZE + 1]; ///< The input buffer, +1 for the null terminator.
-  char tokens[SERIAL_CLI_COMMAND_MAX_ARGS]
-             [SERIAL_CLI_COMMAND_MAX_ARG_LENGTH + 1]; ///< Extracted tokens, +1 for the null terminator.
+  char promptBuffer[SERIAL_CLI_PROMPT_BUFFER_MAX_LENGTH + 1];                      ///< The prompt buffer.
+  char inputBuffer[SERIAL_CLI_INPUT_BUFFER_SIZE + 1];                              ///< The input buffer.
+  char tokens[SERIAL_CLI_COMMAND_MAX_ARGS][SERIAL_CLI_COMMAND_MAX_ARG_LENGTH + 1]; ///< Extracted tokens.
 } SerialCLI;
 
 /**
@@ -91,6 +84,7 @@ void SerialCLI_Deinit(SerialCLI *cli);
 
 /**
  * Register a command with the SerialCLI.
+ * Command name must be unique and has a maximum length defined by SERIAL_CLI_COMMAND_MAX_ARG_LENGTH.
  *
  * @param cli The SerialCLI instance.
  * @param command The command to register.
@@ -105,6 +99,21 @@ bool SerialCLI_RegisterCommand(SerialCLI *cli, SerialCLI_CommandEntry *command);
  * @param ... The arguments for the format string.
  */
 void SerialCLI_WriteString(SerialCLI *cli, const char *format, ...);
+
+/**
+ * Set the prompt for the SerialCLI.
+ *
+ * @param cli The SerialCLI instance.
+ * @param prompt The prompt string.
+ */
+void SerialCLI_SetPrompt(SerialCLI *cli, const char *prompt);
+
+/**
+ * Reset the prompt to default for the SerialCLI.
+ *
+ * @param cli The SerialCLI instance.
+ */
+void SerialCLI_ResetPrompt(SerialCLI *cli);
 
 /**
  * Process the SerialCLI.

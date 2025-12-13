@@ -2,6 +2,7 @@ add_library(
   serial_cli
   STATIC
   serial_cli.c
+  serial_cli_commands.c
 )
 
 target_include_directories(

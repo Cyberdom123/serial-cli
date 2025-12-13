@@ -1,6 +1,6 @@
-FetchContent_MakeAvailable(googletest)
-
 enable_testing()
+
+FetchContent_MakeAvailable(googletest)
 
 add_executable(
   unit_tests

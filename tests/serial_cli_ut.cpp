@@ -6,7 +6,7 @@
 TEST(SerialCli, Init) {
   ASSERT_TRUE(true);
   SerialCLI cli;
-  auto write = [](const char *, size_t) {};
+  auto write = [](const char *, size_t) -> void {};
 
   ASSERT_FALSE(SerialCLI_Init(nullptr, nullptr));
   ASSERT_FALSE(SerialCLI_Init(&cli, nullptr));
@@ -24,7 +24,7 @@ TEST_F(SerialCLITest, CommandRegistration) {
   ASSERT_FALSE(SerialCLI_RegisterCommand(&cli, nullptr));
   ASSERT_FALSE(SerialCLI_RegisterCommand(&cli, &commandEntry));
 
-  commandEntry.command = [](SerialCLI *, int, const char **) {};
+  commandEntry.command = [](SerialCLI *, int, const char **) -> void {};
 
   ASSERT_TRUE(SerialCLI_RegisterCommand(&cli, &commandEntry));
   ASSERT_FALSE(SerialCLI_RegisterCommand(&cli, &commandEntry)) << "Duplicate registration should fail";
@@ -34,7 +34,7 @@ TEST_F(SerialCLITest, processCommand) {
   static bool isCommandExecuted = false;
 
   SerialCLI_CommandEntry commandEntry;
-  commandEntry.command = [](SerialCLI *, int argc, const char **argv) {
+  commandEntry.command = [](SerialCLI *, int argc, const char **argv) -> void {
     EXPECT_EQ(argc, 1);
     EXPECT_STREQ(argv[0], "test");
 
@@ -63,7 +63,7 @@ TEST_F(SerialCLITest, processCommand) {
 
   for (const auto &testInput : testInputs) {
     isCommandExecuted = false;
-    writeString(testInput.input.c_str());
+    writeString(testInput.input);
     process();
 
     EXPECT_EQ(isCommandExecuted, testInput.expectedResult) << "Input: " << testInput.input << std::endl;
@@ -75,10 +75,33 @@ TEST_F(SerialCLITest, processCommand) {
   }
 }
 
+TEST_F(SerialCLITest, processQuotedArguments) {
+  static bool isCommandExecuted = false;
+
+  SerialCLI_CommandEntry commandEntry;
+  commandEntry.command = [](SerialCLI *, int argc, const char **argv) -> void {
+    EXPECT_EQ(argc, 3);
+    EXPECT_STREQ(argv[0], "test");
+    EXPECT_STREQ(argv[1], "arg with spaces");
+    EXPECT_STREQ(argv[2], "another arg");
+
+    isCommandExecuted = true;
+  };
+  commandEntry.commandName = "test";
+  commandEntry.commandDescription = nullptr;
+
+  ASSERT_TRUE(SerialCLI_RegisterCommand(&cli, &commandEntry));
+
+  writeString("test \"arg with spaces\" \"another arg\"\r");
+  process();
+
+  EXPECT_TRUE(isCommandExecuted);
+}
+
 TEST_F(SerialCLITest, CommandNamesWithSpecialCharacters) {
   static bool isCommandExecuted = false;
 
-  auto handler = [](SerialCLI *, int argc, const char **) {
+  auto handler = [](SerialCLI *, int argc, const char **) -> void {
     EXPECT_EQ(argc, 1);
     isCommandExecuted = true;
   };
@@ -109,7 +132,7 @@ TEST_F(SerialCLITest, MultipleArguments) {
   static bool isCommandExecuted = false;
 
   SerialCLI_CommandEntry commandEntry{};
-  commandEntry.command = [](SerialCLI *, int argc, const char **argv) {
+  commandEntry.command = [](SerialCLI *, int argc, const char **argv) -> void {
     EXPECT_LE(argc, SERIAL_CLI_COMMAND_MAX_ARGS);
     ASSERT_STREQ(argv[0], "test");
     isCommandExecuted = true;
@@ -127,7 +150,7 @@ TEST_F(SerialCLITest, MultipleArguments) {
     testInput += "\r";
 
     isCommandExecuted = false;
-    writeString(testInput.c_str());
+    writeString(testInput);
     process();
     EXPECT_TRUE(isCommandExecuted) << "Input: " << testInput;
   }
@@ -141,7 +164,7 @@ TEST_F(SerialCLITest, MultipleArguments) {
     testInput += "\r";
 
     isCommandExecuted = false;
-    writeString(testInput.c_str());
+    writeString(testInput);
     process();
     EXPECT_FALSE(isCommandExecuted) << "Input: " << testInput;
   }
@@ -149,7 +172,7 @@ TEST_F(SerialCLITest, MultipleArguments) {
 
 TEST_F(SerialCLITest, ExceedingCommandBuffer) {
   SerialCLI_CommandEntry commandEntry{};
-  commandEntry.command = [](SerialCLI *, int, const char **) { FAIL() << "Command should not be executed"; };
+  commandEntry.command = [](SerialCLI *, int, const char **) -> void { FAIL() << "Command should not be executed"; };
   commandEntry.commandName = "test";
   commandEntry.commandDescription = nullptr;
   ASSERT_TRUE(SerialCLI_RegisterCommand(&cli, &commandEntry));
@@ -161,7 +184,7 @@ TEST_F(SerialCLITest, ExceedingCommandBuffer) {
   }
   testInput += "\r";
 
-  writeString(testInput.c_str());
+  writeString(testInput);
   process();
 }
 
@@ -169,7 +192,7 @@ TEST_F(SerialCLITest, ExceedingArgumentBuffer) {
   static bool isCommandExecuted = false;
 
   SerialCLI_CommandEntry commandEntry{};
-  commandEntry.command = [](SerialCLI *, int argc, const char **argv) {
+  commandEntry.command = [](SerialCLI *, int argc, const char **argv) -> void {
     EXPECT_LE(argc, SERIAL_CLI_COMMAND_MAX_ARGS);
     ASSERT_STREQ(argv[0], "test");
     isCommandExecuted = true;
@@ -184,7 +207,7 @@ TEST_F(SerialCLITest, ExceedingArgumentBuffer) {
   testInput.append(SERIAL_CLI_COMMAND_MAX_ARG_LENGTH, 'a');
   testInput += "\r";
 
-  writeString(testInput.c_str());
+  writeString(testInput);
   process();
   EXPECT_TRUE(isCommandExecuted) << "Input: " << testInput;
 
@@ -194,7 +217,7 @@ TEST_F(SerialCLITest, ExceedingArgumentBuffer) {
   testInput += "\r";
 
   isCommandExecuted = false;
-  writeString(testInput.c_str());
+  writeString(testInput);
   process();
   EXPECT_FALSE(isCommandExecuted) << "Input: " << testInput;
 }
