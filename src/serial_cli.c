@@ -28,7 +28,7 @@ static void callCommand(SerialCLI *cli, const char *commandName) {
   SerialCLI_CommandEntry *entry = SerialCLI_GetCommandEntry(cli, commandName);
   if (NULL != entry) {
     char *toWrite = "\r\n";
-    cli->write(toWrite, strlen(toWrite));
+    SerialCLI_WriteBack(cli, toWrite, strlen(toWrite));
 
     char *argv[SERIAL_CLI_COMMAND_MAX_ARGS + 1] = {0};
     SerialCLI_GetArgv(cli, argv);
@@ -93,7 +93,7 @@ static void helpCommand(SerialCLI *cli, int argc, const char **argv) {
 
   SerialCLI_WriteString(cli, "Available commands:\r\n");
 
-  SerialCLI_CommandEntry *current = cli->commands;
+  SerialCLI_CommandEntry *current = cli->commands.next;
   while (current != NULL) {
     if (NULL != current->commandName) {
       SerialCLI_WriteString(cli, "  %s - ", current->commandName);
@@ -101,7 +101,6 @@ static void helpCommand(SerialCLI *cli, int argc, const char **argv) {
     if (NULL != current->commandDescription) {
       SerialCLI_WriteString(cli, "%s\r\n", current->commandDescription);
     }
-
     current = current->next;
   }
 }
@@ -112,24 +111,24 @@ bool SerialCLI_Init(SerialCLI *cli, SerialCLI_Write write) {
   }
 
   cli->write = write;
-  cli->commands = NULL;
   strncpy(cli->promptBuffer, ">>", SERIAL_CLI_PROMPT_BUFFER_MAX_LENGTH);
   resetCLI(cli);
 
-  static SerialCLI_CommandEntry helpEntry;
-  helpEntry.command = helpCommand;
-  helpEntry.commandName = "help";
-  helpEntry.commandDescription = "Prints all available commands";
-  SerialCLI_RegisterCommand(cli, &helpEntry);
+  SerialCLI_CommandEntry *helpEntry = &cli->commands;
+  helpEntry->command = helpCommand;
+  helpEntry->commandName = "help";
+  helpEntry->commandDescription = "Prints all available commands";
+  helpEntry->next = NULL;
   return true;
 }
 
-void SerialCLI_Deinit(SerialCLI *cli) {
+bool SerialCLI_Deinit(SerialCLI *cli) {
   if (NULL == cli) {
-    return;
+    return false;
   }
 
   resetCLI(cli);
+  return true;
 }
 
 static void handleDelete(SerialCLI *cli, char *output, size_t *outputLen) {
@@ -143,10 +142,12 @@ static void handleDelete(SerialCLI *cli, char *output, size_t *outputLen) {
 
   // Add delete sequence to output buffer
   const char *deleteSequence = "\b \b";
-  bool isOutputSpaceAvailable = ((*outputLen + strlen(deleteSequence)) < SERIAL_CLI_OUTPUT_BUFFER_SIZE);
+  size_t deleteSeqLen = strlen(deleteSequence);
+  bool isOutputSpaceAvailable = ((*outputLen + deleteSeqLen) < SERIAL_CLI_OUTPUT_BUFFER_SIZE);
+
   if (isOutputSpaceAvailable) {
     size_t outIdx = *outputLen;
-    for (size_t i = 0; i < strlen(deleteSequence); i++) {
+    for (size_t i = 0; i < deleteSeqLen; i++) {
       output[outIdx] = deleteSequence[i];
       ++outIdx;
     }
@@ -174,23 +175,23 @@ static void handleTabCompletion(SerialCLI *cli, char *output, size_t *outputLen)
     output[outIdx] = name[i];
     ++outIdx;
   }
+
   output[outIdx] = ' ';
   ++outIdx;
   cli->inputBuffer[nameLen] = ' ';
   cli->charCount = nameLen + strlen(" ");
-
   *outputLen = outIdx;
 }
 
-void SerialCLI_Read(SerialCLI *cli, const char *str, size_t length) {
+bool SerialCLI_Read(SerialCLI *cli, const char *str, size_t length) {
   if (NULL == cli || (NULL == str)) {
-    return;
+    return false;
   }
 
   bool isStateValid = !cli->isCommandReady;
   bool isLengthValid = (SERIAL_CLI_OUTPUT_BUFFER_SIZE > length);
   if (!isStateValid || !isLengthValid) {
-    return;
+    return false;
   }
 
   char output[SERIAL_CLI_OUTPUT_BUFFER_SIZE + 1] = {0};
@@ -199,12 +200,12 @@ void SerialCLI_Read(SerialCLI *cli, const char *str, size_t length) {
   for (size_t i = 0; i < length; ++i) {
     if (SERIAL_CLI_INPUT_BUFFER_SIZE == cli->charCount) {
       resetCLI(cli);
-      return;
+      return false;
     }
 
     if (ASCII_CARRIAGE_RETURN == str[i]) {
       cli->isCommandReady = true;
-      return;
+      return true;
     }
 
     if (ASCII_DEL == str[i]) {
@@ -225,13 +226,14 @@ void SerialCLI_Read(SerialCLI *cli, const char *str, size_t length) {
 
   // Echo the received characters back
   if (outputIdx > 0) {
-    cli->write(output, outputIdx);
+    SerialCLI_WriteBack(cli, output, outputIdx);
   }
+  return true;
 }
 
-void SerialCLI_WriteString(SerialCLI *cli, const char *format, ...) {
+bool SerialCLI_WriteString(SerialCLI *cli, const char *format, ...) {
   if (NULL == format || NULL == cli) {
-    return;
+    return false;
   }
 
   char buffer[SERIAL_CLI_OUTPUT_BUFFER_SIZE];
@@ -242,26 +244,29 @@ void SerialCLI_WriteString(SerialCLI *cli, const char *format, ...) {
 
   bool isLengthValid = (len < SERIAL_CLI_OUTPUT_BUFFER_SIZE);
   if (len <= 0 || !isLengthValid) {
-    return;
+    return false;
   }
 
-  cli->write(buffer, (size_t)len);
+  SerialCLI_WriteBack(cli, buffer, (size_t)len);
+  return true;
 }
 
-void SerialCLI_SetPrompt(SerialCLI *cli, const char *prompt) {
+bool SerialCLI_SetPrompt(SerialCLI *cli, const char *prompt) {
   if ((NULL == cli) || (NULL == prompt)) {
-    return;
+    return false;
   }
 
   strncpy(cli->promptBuffer, prompt, SERIAL_CLI_PROMPT_BUFFER_MAX_LENGTH);
+  return true;
 }
 
-void SerialCLI_ResetPrompt(SerialCLI *cli) {
+bool SerialCLI_ResetPrompt(SerialCLI *cli) {
   if (NULL == cli) {
-    return;
+    return false;
   }
 
   strncpy(cli->promptBuffer, ">>", SERIAL_CLI_PROMPT_BUFFER_MAX_LENGTH);
+  return true;
 }
 
 bool SerialCLI_RegisterCommand(SerialCLI *cli, SerialCLI_CommandEntry *command) {
@@ -273,17 +278,7 @@ bool SerialCLI_RegisterCommand(SerialCLI *cli, SerialCLI_CommandEntry *command) 
     return false;
   }
 
-  if (NULL == cli->commands) {
-    command->next = NULL;
-    cli->commands = command;
-    return true;
-  }
-
-  SerialCLI_CommandEntry *current = cli->commands;
-  // Check if command is already registered
-  if (current == command) {
-    return false;
-  }
+  SerialCLI_CommandEntry *current = &cli->commands;
 
   while (NULL != current->next) {
     // Check if command is already registered
@@ -298,9 +293,9 @@ bool SerialCLI_RegisterCommand(SerialCLI *cli, SerialCLI_CommandEntry *command) 
   return true;
 }
 
-void SerialCLI_Process(SerialCLI *cli) {
+bool SerialCLI_Process(SerialCLI *cli) {
   if (NULL == cli) {
-    return;
+    return false;
   }
 
   if (cli->isCommandReady) {
@@ -310,4 +305,6 @@ void SerialCLI_Process(SerialCLI *cli) {
     }
     resetCLI(cli);
   }
+
+  return true;
 }
