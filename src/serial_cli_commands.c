@@ -1,10 +1,11 @@
 #include "serial_cli_commands.h"
 
+#include <stddef.h>
 #include <string.h>
 
 SerialCLI_CommandEntry *SerialCLI_GetCommandEntry(SerialCLI *cli, const char *commandName) {
   SerialCLI_CommandEntry *current = &cli->commands;
-  while (current != NULL) {
+  while (NULL != current) {
     if (0 == strncmp(current->commandName, commandName, SERIAL_CLI_COMMAND_MAX_ARG_LENGTH)) {
       return current;
     }
@@ -18,14 +19,15 @@ const char *SerialCLI_ResolvePartialCommand(SerialCLI *cli, const char *partialN
   size_t matchCount = 0;
 
   const char *command = NULL;
-  while (current != NULL) {
+  size_t partialLen = strlen(partialName);
+  while (NULL != current) {
     if (NULL != current->commandName) {
-      if (strlen(partialName) >= strlen(current->commandName)) {
+      if (partialLen >= strlen(current->commandName)) {
         current = current->next;
         continue;
       }
 
-      if (0 == strncmp(partialName, current->commandName, strlen(partialName))) {
+      if (0 == strncmp(partialName, current->commandName, partialLen)) {
         command = current->commandName;
         ++matchCount;
       }

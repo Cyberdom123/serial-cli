@@ -17,6 +17,15 @@ extern "C" {
  */
 static inline void SerialCLI_GetArgv(SerialCLI *cli, char *argv[]);
 
+/**
+ * Function to write back output to the serial interface.
+ *
+ * @param cli The SerialCLI instance.
+ * @param output The output string.
+ * @param length The length of the output string.
+ */
+static inline void SerialCLI_WriteBack(SerialCLI *cli, const char *output, size_t length);
+
 // Inline implementation below
 
 static inline void SerialCLI_GetArgv(SerialCLI *cli, char *argv[]) {
@@ -24,6 +33,12 @@ static inline void SerialCLI_GetArgv(SerialCLI *cli, char *argv[]) {
     argv[i] = cli->tokens[i];
   }
   argv[SERIAL_CLI_COMMAND_MAX_ARGS] = NULL;
+}
+
+static inline void SerialCLI_WriteBack(SerialCLI *cli, const char *output, size_t length) {
+  if (NULL != cli->write) {
+    cli->write(output, length);
+  }
 }
 
 #ifdef __cplusplus

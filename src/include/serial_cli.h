@@ -9,12 +9,12 @@ extern "C" {
 #endif
 
 enum {
-  SERIAL_CLI_COMMAND_MAX_ARGS = 5,
+  SERIAL_CLI_COMMAND_MAX_ARGS = 8,
   SERIAL_CLI_PROMPT_BUFFER_MAX_LENGTH = 32,
-  SERIAL_CLI_COMMAND_MAX_ARG_LENGTH = 32,
+  SERIAL_CLI_COMMAND_MAX_ARG_LENGTH = 64,
   SERIAL_CLI_OUTPUT_BUFFER_SIZE = 128,
   SERIAL_CLI_INPUT_BUFFER_SIZE =
-      ((SERIAL_CLI_COMMAND_MAX_ARGS * SERIAL_CLI_COMMAND_MAX_ARG_LENGTH) + SERIAL_CLI_COMMAND_MAX_ARGS),
+      ((SERIAL_CLI_COMMAND_MAX_ARGS * SERIAL_CLI_COMMAND_MAX_ARG_LENGTH) + SERIAL_CLI_COMMAND_MAX_ARG_LENGTH),
 };
 
 // Forward declaration
@@ -62,8 +62,10 @@ typedef struct SerialCLI {
  * @param cli The SerialCLI instance.
  * @param str The buffer to read the string into.
  * @param len The length of the buffer.
+ *
+ * @return true if the string was read successfully, false otherwise.
  */
-void SerialCLI_Read(SerialCLI *cli, const char *str, size_t len);
+bool SerialCLI_Read(SerialCLI *cli, const char *str, size_t len);
 
 /**
  * Initialize the SerialCLI.
@@ -79,8 +81,10 @@ bool SerialCLI_Init(SerialCLI *cli, SerialCLI_Write write);
  * Deinitialize the SerialCLI.
  *
  * @param cli The SerialCLI instance.
+ *
+ *@return true if the deinitialization was successful, false otherwise.
  */
-void SerialCLI_Deinit(SerialCLI *cli);
+bool SerialCLI_Deinit(SerialCLI *cli);
 
 /**
  * Register a command with the SerialCLI.
@@ -103,30 +107,38 @@ bool SerialCLI_RegisterCommand(SerialCLI *cli, SerialCLI_CommandEntry *command);
  * @param cli The SerialCLI instance.
  * @param format The format string.
  * @param ... The arguments for the format string.
+ *
+ * @return true if the string was written successfully, false otherwise.
  */
-void SerialCLI_WriteString(SerialCLI *cli, const char *format, ...);
+bool SerialCLI_WriteString(SerialCLI *cli, const char *format, ...);
 
 /**
  * Set the prompt for the SerialCLI.
  *
  * @param cli The SerialCLI instance.
  * @param prompt The prompt string.
+ *
+ * @return true if the prompt was set successfully, false otherwise.
  */
-void SerialCLI_SetPrompt(SerialCLI *cli, const char *prompt);
+bool SerialCLI_SetPrompt(SerialCLI *cli, const char *prompt);
 
 /**
  * Reset the prompt to default for the SerialCLI.
  *
  * @param cli The SerialCLI instance.
+ *
+ *@return true if the prompt was reset successfully, false otherwise.
  */
-void SerialCLI_ResetPrompt(SerialCLI *cli);
+bool SerialCLI_ResetPrompt(SerialCLI *cli);
 
 /**
  * Process the SerialCLI.
  *
  * @param cli The SerialCLI instance.
+ *
+ * @return true if the processing was successful, false otherwise.
  */
-void SerialCLI_Process(SerialCLI *cli);
+bool SerialCLI_Process(SerialCLI *cli);
 
 #ifdef __cplusplus
 }

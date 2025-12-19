@@ -14,7 +14,11 @@ public:
     }
   }
 
-  void writeString(std::string_view str) { SerialCLI_Read(&cli, str.data(), str.size()); }
+  void writeString(std::string_view str) {
+    for (char ch : str) {
+      SerialCLI_Read(&cli, &ch, 1);
+    }
+  }
 
 protected:
   void SetUp() override {
