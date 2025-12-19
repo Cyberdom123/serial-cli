@@ -93,7 +93,7 @@ static void helpCommand(SerialCLI *cli, int argc, const char **argv) {
 
   SerialCLI_WriteString(cli, "Available commands:\r\n");
 
-  SerialCLI_CommandEntry *current = cli->commands;
+  SerialCLI_CommandEntry *current = cli->commands.next;
   while (current != NULL) {
     if (NULL != current->commandName) {
       SerialCLI_WriteString(cli, "  %s - ", current->commandName);
@@ -112,15 +112,14 @@ bool SerialCLI_Init(SerialCLI *cli, SerialCLI_Write write) {
   }
 
   cli->write = write;
-  cli->commands = NULL;
   strncpy(cli->promptBuffer, ">>", SERIAL_CLI_PROMPT_BUFFER_MAX_LENGTH);
   resetCLI(cli);
 
-  static SerialCLI_CommandEntry helpEntry;
-  helpEntry.command = helpCommand;
-  helpEntry.commandName = "help";
-  helpEntry.commandDescription = "Prints all available commands";
-  SerialCLI_RegisterCommand(cli, &helpEntry);
+  SerialCLI_CommandEntry *helpEntry = &cli->commands;
+  helpEntry->command = helpCommand;
+  helpEntry->commandName = "help";
+  helpEntry->commandDescription = "Prints all available commands";
+  helpEntry->next = NULL;
   return true;
 }
 
@@ -272,13 +271,7 @@ bool SerialCLI_RegisterCommand(SerialCLI *cli, SerialCLI_CommandEntry *command) 
     return false;
   }
 
-  if (NULL == cli->commands) {
-    command->next = NULL;
-    cli->commands = command;
-    return true;
-  }
-
-  SerialCLI_CommandEntry *current = cli->commands;
+  SerialCLI_CommandEntry *current = &cli->commands;
   // Check if command is already registered
   if (current == command) {
     return false;

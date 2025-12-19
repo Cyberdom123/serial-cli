@@ -44,8 +44,8 @@ typedef struct SerialCLI_CommandEntry {
 } SerialCLI_CommandEntry;
 
 typedef struct SerialCLI {
-  SerialCLI_Write write;            ///< The write callback function.
-  SerialCLI_CommandEntry *commands; ///< Linked list of registered commands.
+  SerialCLI_Write write;           ///< The write callback function.
+  SerialCLI_CommandEntry commands; ///< Linked list of registered commands.
 
   bool isCommandReady; ///< Flag indicating if a command is ready to be processed.
   size_t charCount;    ///< The number of characters in the input buffer.
