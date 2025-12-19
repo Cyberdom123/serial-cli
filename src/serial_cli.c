@@ -175,9 +175,10 @@ static void handleTabCompletion(SerialCLI *cli, char *output, size_t *outputLen)
   }
   output[outIdx] = ' ';
   ++outIdx;
+  cli->inputBuffer[nameLen] = ' ';
+  cli->charCount = nameLen + strlen(" ");
 
   *outputLen = outIdx;
-  cli->charCount = nameLen + strlen(" ");
 }
 
 void SerialCLI_Read(SerialCLI *cli, const char *str, size_t length) {
